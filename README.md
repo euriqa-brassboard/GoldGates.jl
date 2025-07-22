@@ -1,5 +1,10 @@
 # GoldGates.jl
 Repository containing scripts and utilities for generating gate solutions on Gold System using the [MSSim.jl package](https://github.com/euriqa-brassboard/MSSim.jl).
+Be sure to install/update this package on your system by running the following line in a Julia REPL:
+`
+using Pkg;
+Pkg.add(url="https://github.com/euriqa-brassboard/MSSim.jl");
+`
 
 ## Project Structure
 Below is a description of all the subdirectories
