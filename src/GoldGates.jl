@@ -111,4 +111,6 @@ function XXSolution(params::Seq.RawParams, angle_sign)
     return _load_json(d, XXSolution)
 end
 
+include("thread_utils.jl")
+
 end
