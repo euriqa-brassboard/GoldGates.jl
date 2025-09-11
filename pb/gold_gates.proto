@@ -1,0 +1,41 @@
+//
+
+syntax = "proto3";
+
+message ParticipationFactor {
+  repeated double factors = 1;
+}
+
+message Modes {
+  repeated double radial1 = 1;
+  repeated double radial2 = 2;
+  repeated double axial = 3;
+}
+
+message SysMetadata {
+  optional map<string,string> units = 1;
+  optional string structure = 2;
+}
+
+message SystemParams {
+  Modes modes = 1;
+  repeated double lamb_dicke_parameters = 2;
+  repeated ParticipationFactor participation_factors = 3;
+  map<string,double> dac_terms = 4;
+  SysMetadata metadata = 5;
+}
+
+message XXSolution {
+  uint32 nsteps = 1;
+  bool angle_sign = 2;
+  repeated double time = 3;
+  repeated double phase = 4;
+  repeated double phase_slope = 5;
+  repeated double amp = 6;
+  repeated double amp_slope = 7;
+}
+
+message GateSolutionSet {
+  SystemParams params = 1;
+  map<string,XXSolution> XX = 2;
+}
