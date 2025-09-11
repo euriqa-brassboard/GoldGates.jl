@@ -11,6 +11,7 @@ include("gold_gates_pb.jl")
 import .gold_gates_pb: ParticipationFactor, XXSolution, SysMetadata, Modes,
     SystemParams, GateSolutionSet
 
+Base.length(f::ParticipationFactor) = length(f.factors)
 Base.getindex(f::ParticipationFactor, i) = getindex(f.factors, i)
 Base.setindex!(f::ParticipationFactor, v, i) = setindex!(f.factors, v, i)
 
@@ -59,12 +60,75 @@ _load_json(v, ::Type{GateSolutionSet}) =
 _to_json(v::GateSolutionSet) = Dict("modes"=>_to_json(v.params.modes),
                                     "XX"=>Dict(k=>_to_json(v) for (k, v) in v.XX))
 
+function _verify_num_modes(modes::Modes)
+    if isempty(modes.radial1)
+        throw(ArgumentError("Radial mode missing"))
+    end
+    nmodes = length(modes.radial1)
+    if !isempty(modes.radial2) && length(modes.radial2) == nmodes
+        throw(ArgumentError("Mismatch between radial mode number"))
+    end
+    if !isempty(modes.axial) && length(modes.axial) == nmodes
+        throw(ArgumentError("Mismatch between radial and axial mode number"))
+    end
+    return nmodes
+end
+
+function verify(params::SystemParams)
+    if params.modes === nothing
+        throw(ArgumentError("Mode missing"))
+    end
+    nmodes = _verify_num_modes(params.modes)
+    if !isempty(params.lamb_dicke_parameters) && length(params.lamb_dicke_parameters) != nmodes
+        throw(ArgumentError("Lamb Dikie parameters length mismatch"))
+    end
+    if !isempty(params.participation_factors) && length(params.participation_factors) != nmodes
+        throw(ArgumentError("Mode participation factors length mismatch"))
+    end
+    for factors in params.participation_factors
+        if length(factors) != nmodes
+            throw(ArgumentError("Mode participation factors ion count mismatch"))
+        end
+    end
+    return params
+end
+
+function verify(sol::XXSolution)
+    nsteps = sol.nsteps
+    if length(sol.time) != nsteps
+        throw(ArgumentError("Solution time count mismatch"))
+    end
+    if length(sol.phase) != nsteps
+        throw(ArgumentError("Solution phase count mismatch"))
+    end
+    if length(sol.phase_slope) != nsteps
+        throw(ArgumentError("Solution phase slope count mismatch"))
+    end
+    if length(sol.amp) != nsteps
+        throw(ArgumentError("Solution amp count mismatch"))
+    end
+    if length(sol.amp_slope) != nsteps
+        throw(ArgumentError("Solution amp slope count mismatch"))
+    end
+    return sol
+end
+
+function verify(sol_set::GateSolutionSet)
+    if sol_set.params !== nothing
+        verify(sol_set.params)
+    end
+    for (k, sol) in sol_set.XX
+        verify(sol)
+    end
+    return sol_set
+end
+
 function Base.read(io::IO, ::Type{SystemParams}; format=:protobuf)
     if format === :json
-        return _load_json(JSON.parse(io), SystemParams)
+        return verify(_load_json(JSON.parse(io), SystemParams))
     elseif format === :protobuf
         decoder = PB.ProtoDecoder(io)
-        return PB.decode(decoder, SystemParams)
+        return verify(PB.decode(decoder, SystemParams))
     else
         throw(ArgumentError("Unknown format $(format) for system parameters"))
     end
@@ -84,10 +148,10 @@ end
 
 function Base.read(io::IO, ::Type{GateSolutionSet}; format=:protobuf)
     if format === :json
-        return _load_json(JSON.parse(io), GateSolutionSet)
+        return verify(_load_json(JSON.parse(io), GateSolutionSet))
     elseif format === :protobuf
         decoder = PB.ProtoDecoder(io)
-        return PB.decode(decoder, GateSolutionSet)
+        return verify(PB.decode(decoder, GateSolutionSet))
     else
         throw(ArgumentError("Unknown format $(format) for gate solution set"))
     end
@@ -108,7 +172,7 @@ end
 function XXSolution(params::Seq.RawParams, angle_sign)
     d = Seq.gate_solution_info(params)
     d["angle_sign"] = sign(angle_sign)
-    return _load_json(d, XXSolution)
+    return verify(_load_json(d, XXSolution))
 end
 
 include("thread_utils.jl")
