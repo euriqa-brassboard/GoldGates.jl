@@ -1,0 +1,23 @@
+name = "GoldGates"
+uuid = "6beb795d-11fa-411e-af76-5aa8f71e9b96"
+version = "0.0.1"
+
+[deps]
+MSSim = "bb1f6ef4-bfb3-4e09-8d02-eba6158954f3"
+NLopt = "76087f3c-5699-56af-9a33-bf431cd00edd"
+ProtoBuf = "3349acd9-ac6a-5e09-bcdb-63829b23a429"
+
+[sources]
+MSSim = {url = "git@github.com:euriqa-brassboard/GoldGates.git", rev = "main"}
+
+[compat]
+julia = "1.10"
+MSSim = "1.0"
+NLopt = "1.1"
+ProtoBuf = "1.0"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
