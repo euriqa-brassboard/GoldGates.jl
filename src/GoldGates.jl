@@ -176,9 +176,33 @@ function XXSolution(params::Seq.RawParams, angle_sign)
 end
 
 include("thread_utils.jl")
+using .ThreadUtils
 include("solution_candidates.jl")
 import .SolutionCandidates: Candidate,
     load_candidates_files, load_candidates_dir, load_candidates_dirs,
     save_candidates
+
+function vv2m(vv)
+    nrow = length(vv)
+    if nrow == 0
+        return Matrix{eltype(eltype(vv))}(undef, 0, 0)
+    end
+    ncol = length(vv[1])
+    m = Matrix{Float64}(undef, nrow, ncol)
+    for i in 1:nrow
+        m[i, :] = vv[i]
+    end
+    return m
+end
+m2vv(m) = [m[i, :] for i in 1:size(m, 1)]
+
+function set_mode_weight!(weights, ηs, bij, ion1, ion2)
+    nions = length(ηs)
+    for i in 1:nions
+        weights[i] = bij[i, ion1] * bij[i, ion2] * ηs[i]^2
+    end
+    return weights
+end
+include("optimizers.jl")
 
 end
