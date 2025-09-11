@@ -8,7 +8,7 @@ NLopt = "76087f3c-5699-56af-9a33-bf431cd00edd"
 ProtoBuf = "3349acd9-ac6a-5e09-bcdb-63829b23a429"
 
 [sources]
-MSSim = {url = "https://github.com/euriqa-brassboard/GoldGates.git", rev = "main"}
+MSSim = {url = "https://github.com/euriqa-brassboard/MSSim.jl.git", rev = "main"}
 
 [compat]
 julia = "1.11"
