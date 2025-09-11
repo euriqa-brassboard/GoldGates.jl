@@ -13,7 +13,7 @@ message Modes {
 }
 
 message SysMetadata {
-  optional map<string,string> units = 1;
+  map<string,string> units = 1;
   optional string structure = 2;
 }
 
