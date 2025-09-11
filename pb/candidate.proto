@@ -1,0 +1,15 @@
+//
+
+syntax = "proto3";
+
+import "ms_solutions.proto";
+
+message Candidate {
+  repeated double param = 1;
+  SolutionProperties props = 2;
+}
+
+message Candidates {
+  repeated Candidate candidates = 1;
+  string meta = 2;
+}

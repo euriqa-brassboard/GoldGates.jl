@@ -112,5 +112,9 @@ function XXSolution(params::Seq.RawParams, angle_sign)
 end
 
 include("thread_utils.jl")
+include("solution_candidates.jl")
+import .SolutionCandidates: Candidate,
+    load_candidates_files, load_candidates_dir, load_candidates_dirs,
+    save_candidates
 
 end
