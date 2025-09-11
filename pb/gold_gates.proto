@@ -27,7 +27,7 @@ message SystemParams {
 
 message XXSolution {
   uint32 nsteps = 1;
-  bool angle_sign = 2;
+  int32 angle_sign = 2;
   repeated double time = 3;
   repeated double phase = 4;
   repeated double phase_slope = 5;
