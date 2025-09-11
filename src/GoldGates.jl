@@ -4,6 +4,7 @@ module GoldGates
 
 import ProtoBuf as PB
 using JSON
+import MSSim: Sequence as Seq
 
 include("gold_gates_pb.jl")
 
@@ -102,6 +103,12 @@ function Base.write(io::IO, v::GateSolutionSet; format=:protobuf)
         throw(ArgumentError("Unknown format $(format) for gate solution set"))
     end
     return
+end
+
+function XXSolution(params::Seq.RawParams, angle_sign)
+    d = Seq.gate_solution_info(params)
+    d["angle_sign"] = sign(angle_sign)
+    return _load_json(d, XXSolution)
 end
 
 end
