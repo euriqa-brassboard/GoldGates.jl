@@ -183,4 +183,44 @@ end
     check_json(sol2)
 end
 
+@testset "GateSolutionSet" begin
+    sol = XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4], [0.1, -0.1, 0.2],
+                     [0.3, 1.0, 0.3], [0.2, -0.2, 0.4])
+    sol2 = XXSolution(nsteps=3, angle_sign=1,
+                      time=[1.0, 2.0, 1.0],
+                      phase=[0.1, 0.3, 0.5],
+                      phase_slope=[0.1, -1.1, 0.2],
+                      amp=[0.3, 1.0, 0.1],
+                      amp_slope=[0.1, -0.2, 0.4])
+    modes = Modes([1.2, 3.4, 3.4], [0.3, 0.1, 0.4], [1, 2, 3])
+    pf1 = ParticipationFactor([0.1, 0.2, 0.3])
+    pf2 = ParticipationFactor([0.2, 0.1, -0.3])
+    pf3 = ParticipationFactor([0.5, -0.1, -0.4])
+    sysmeta = SysMetadata(Dict("A"=>"B", "C"=>"D"), "abc")
+    params = SystemParams(modes, [0.1, 0.3, 0.2], [pf1, pf2, pf3],
+                          Dict("x2"=>0.1, "xy"=>0.2), sysmeta)
+    params2 = SystemParams(modes=Modes(radial1=[1.2, 3.4, 3.4]))
+    solset = GateSolutionSet(params, Dict("1"=>sol, "2"=>sol2))
+    solset2 = GateSolutionSet(params2, Dict("2"=>sol, "1"=>sol2))
+    @test solset != solset2
+
+    @test PB.default_values(GateSolutionSet) == (;params=nothing,
+                                                 XX=Dict{String,XXSolution}())
+    @test PB.field_numbers(GateSolutionSet) == (;params=1, XX=2)
+
+    check_pb(GateSolutionSet())
+    check_pb(solset)
+    check_pb(solset2)
+
+    check_json(solset2)
+    solset3 = GG._load_json(GG._to_json(solset), GateSolutionSet)
+    @test solset3 != solset
+    @test solset3.XX == solset.XX
+    @test solset3.params.modes == solset.params.modes
+    @test isempty(solset3.params.lamb_dicke_parameters)
+    @test isempty(solset3.params.participation_factors)
+    @test isempty(solset3.params.dac_terms)
+    @test isnothing(solset3.params.metadata)
+end
+
 end
