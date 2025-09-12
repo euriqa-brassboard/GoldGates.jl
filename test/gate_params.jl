@@ -113,6 +113,14 @@ end
     check_pb(modes)
     check_pb(modes2)
 
+    @test GG._verify_num_modes(modes) == 3
+    @test GG._verify_num_modes(modes2) == 3
+    @test_throws ArgumentError "Radial mode missing" GG._verify_num_modes(Modes())
+    @test_throws(ArgumentError, "Mismatch between radial mode number",
+                 GG._verify_num_modes(Modes(radial1=[1, 2, 3], radial2=[1, 2])))
+    @test_throws(ArgumentError, "Mismatch between radial and axial mode number",
+                 GG._verify_num_modes(Modes(radial1=[1, 2, 3], axial=[1, 0])))
+
     @test check_json(modes) == Dict("radial"=>modes.radial1,
                                     "radial2"=>modes.radial2,
                                     "axial"=>modes.axial)

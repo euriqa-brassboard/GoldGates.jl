@@ -106,10 +106,10 @@ function _verify_num_modes(modes::Modes)
         throw(ArgumentError("Radial mode missing"))
     end
     nmodes = length(modes.radial1)
-    if !isempty(modes.radial2) && length(modes.radial2) == nmodes
+    if !isempty(modes.radial2) && length(modes.radial2) != nmodes
         throw(ArgumentError("Mismatch between radial mode number"))
     end
-    if !isempty(modes.axial) && length(modes.axial) == nmodes
+    if !isempty(modes.axial) && length(modes.axial) != nmodes
         throw(ArgumentError("Mismatch between radial and axial mode number"))
     end
     return nmodes
