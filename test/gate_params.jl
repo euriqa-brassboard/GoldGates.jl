@@ -204,6 +204,31 @@ end
     check_pb(sol)
     check_pb(sol2)
 
+    @test GG.verify(sol) === sol
+    @test GG.verify(sol2) === sol2
+    @test_throws(ArgumentError, "Invalid solution angle sign",
+                 GG.verify(XXSolution(3, 0, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4],
+                                      [0.1, -0.1, 0.2], [0.3, 1.0, 0.3],
+                                      [0.2, -0.2, 0.4])))
+    @test_throws(ArgumentError, "Solution time count mismatch",
+                 GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0, 1.2], [0.1, 0.3, 0.4],
+                                      [0.1, -0.1, 0.2], [0.3, 1.0, 0.3],
+                                      [0.2, -0.2, 0.4])))
+    @test_throws(ArgumentError, "Solution phase count mismatch",
+                 GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0], [0.3, 0.4],
+                                      [0.1, -0.1, 0.2], [0.3, 1.0, 0.3],
+                                      [0.2, -0.2, 0.4])))
+    @test_throws(ArgumentError, "Solution phase slope count mismatch",
+                 GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4],
+                                      [0.1, -0.1], [0.3, 1.0, 0.3], [0.2, -0.2, 0.4])))
+    @test_throws(ArgumentError, "Solution amp count mismatch",
+                 GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4],
+                                      [0.1, -0.1, 0.2], [0.3, 1.0, 0.3, 0.2],
+                                      [0.2, -0.2, 0.4])))
+    @test_throws(ArgumentError, "Solution amp slope count mismatch",
+                 GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4],
+                                      [0.1, -0.1, 0.2], [0.3, 1.0, 0.3], [0.2, -0.2])))
+
     check_json(sol)
     check_json(sol2)
 end

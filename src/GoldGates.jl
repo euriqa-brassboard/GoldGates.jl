@@ -135,6 +135,9 @@ function verify(params::SystemParams)
 end
 
 function verify(sol::XXSolution)
+    if sol.angle_sign != 1 && sol.angle_sign != -1
+        throw(ArgumentError("Invalid solution angle sign"))
+    end
     nsteps = sol.nsteps
     if length(sol.time) != nsteps
         throw(ArgumentError("Solution time count mismatch"))
