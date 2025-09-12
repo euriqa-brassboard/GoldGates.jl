@@ -15,6 +15,7 @@ using Test
     pf2 = ParticipationFactor(factors=[0.1, 0.2, 0.3])
     @test pf.factors == pf2.factors
     @test length(pf) == 3
+    @test eltype(pf) === Float64
     @test pf[1] == 0.1
     @test pf[2] == 0.2
     @test pf[3] == 0.3

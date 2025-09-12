@@ -11,6 +11,7 @@ include("gold_gates_pb.jl")
 import .gold_gates_pb: ParticipationFactor, XXSolution, SysMetadata, Modes,
     SystemParams, GateSolutionSet
 
+Base.eltype(f::ParticipationFactor) = eltype(f.factors)
 Base.length(f::ParticipationFactor) = length(f.factors)
 Base.getindex(f::ParticipationFactor, i) = getindex(f.factors, i)
 Base.setindex!(f::ParticipationFactor, v, i) = setindex!(f.factors, v, i)
