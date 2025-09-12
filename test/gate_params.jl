@@ -94,4 +94,29 @@ end
                                       "structure"=>sysmeta.structure)
 end
 
+@testset "Modes" begin
+    modes = Modes([1.2, 3.4, 3.4], [0.3, 0.1, 0.4], [1, 2, 3])
+    @test modes.radial1 == [1.2, 3.4, 3.4]
+    @test modes.radial2 == [0.3, 0.1, 0.4]
+    @test modes.axial == [1.0, 2.0, 3.0]
+    modes2 = Modes(radial1=[1.2, 3.4, 3.4])
+    @test modes2.radial1 == [1.2, 3.4, 3.4]
+    @test modes2.radial2 == Float64[]
+    @test modes2.axial == Float64[]
+    @test modes != modes2
+
+    @test PB.default_values(Modes) == (;radial1=Float64[], radial2=Float64[],
+                                       axial=Float64[])
+    @test PB.field_numbers(Modes) == (;radial1=1, radial2=2, axial=3)
+
+    check_pb(Modes())
+    check_pb(modes)
+    check_pb(modes2)
+
+    @test check_json(modes) == Dict("radial"=>modes.radial1,
+                                    "radial2"=>modes.radial2,
+                                    "axial"=>modes.axial)
+    @test GG._load_json(Dict("radial"=>[0.1, 0.2]), Modes) == Modes(radial1=[0.1, 0.2])
+end
+
 end
