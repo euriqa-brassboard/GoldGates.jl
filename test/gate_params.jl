@@ -10,10 +10,32 @@ import ProtoBuf as PB
 
 using Test
 
+function check_pb(v::T) where T
+    io = IOBuffer()
+    encoder = PB.ProtoEncoder(io)
+    PB.encode(encoder, v)
+    @test PB._encoded_size(v) == io.size
+    seekstart(io)
+
+    decoder = PB.ProtoDecoder(io)
+    v2 = PB.decode(decoder, T)
+    @test v == v2
+    @test isbitstype(T) || v !== v2
+    @test hash(v) == hash(v2)
+end
+
+function check_json(v::T) where T
+    js = GG._to_json(v)
+    v2 = GG._load_json(js, T)
+    @test v == v2
+    @test hash(v) == hash(v2)
+    return js
+end
+
 @testset "ParticipationFactor" begin
     pf = ParticipationFactor([0.1, 0.2, 0.3])
     pf2 = ParticipationFactor(factors=[0.1, 0.2, 0.3])
-    @test pf.factors == pf2.factors
+    @test pf == pf2
     @test length(pf) == 3
     @test eltype(pf) === Float64
     @test pf[1] == 0.1
@@ -23,30 +45,43 @@ using Test
     @test pf[1] == 0.1
     @test pf[2] == 0.9
     @test pf[3] == 0.3
+    @test pf != pf2
+    @test hash(pf) != hash(pf2)
 
     @test PB.default_values(ParticipationFactor) == (;factors=Float64[])
     @test PB.field_numbers(ParticipationFactor) == (;factors=1)
 
-    io = IOBuffer()
-    encoder = PB.ProtoEncoder(io)
-    PB.encode(encoder, pf)
-    @test PB._encoded_size(pf) == io.size
-    seekstart(io)
+    check_pb(ParticipationFactor())
+    check_pb(pf)
+    check_pb(pf2)
 
-    decoder = PB.ProtoDecoder(io)
-    pf3 = PB.decode(decoder, ParticipationFactor)
-    @test pf.factors == pf3.factors
-
-    js = GG._to_json(pf2)
-    @test js === pf2.factors
-    pf4 = GG._load_json(js, ParticipationFactor)
-    @test pf4.factors === pf2.factors
+    @test check_json(pf2) === pf2.factors
 
     @test GG.vv2m(ParticipationFactor[]) == zeros(0, 0)
     @test GG.vv2m(Vector{Float64}[]) == zeros(0, 0)
     @test GG.vv2m([pf, pf2]) == [0.1 0.9 0.3; 0.1 0.2 0.3]
     @test GG.vv2m([[0.1, 0.9, 0.3], [0.1, 0.2, 0.3]]) == [0.1 0.9 0.3; 0.1 0.2 0.3]
     @test GG.m2vv([0.1 0.9 0.3; 0.1 0.2 0.3]) == [[0.1, 0.9, 0.3], [0.1, 0.2, 0.3]]
+end
+
+@testset "SysMetadata" begin
+    sysmeta = SysMetadata(Dict("A"=>"B", "C"=>"D"), "abc")
+    @test sysmeta.units == Dict("A"=>"B", "C"=>"D")
+    @test sysmeta.structure == "abc"
+    sysmeta2 = SysMetadata(units=Dict("A"=>"B", "C"=>"D"))
+    @test sysmeta2.units == Dict("A"=>"B", "C"=>"D")
+    @test sysmeta2.structure == ""
+    @test sysmeta != sysmeta2
+
+    @test PB.default_values(SysMetadata) == (;units=Dict{String,String}(), structure="")
+    @test PB.field_numbers(SysMetadata) == (;units=1, structure=2)
+
+    check_pb(SysMetadata())
+    check_pb(sysmeta)
+    check_pb(sysmeta2)
+
+    @test check_json(sysmeta) == Dict("units"=>sysmeta.units,
+                                      "structure"=>sysmeta.structure)
 end
 
 end

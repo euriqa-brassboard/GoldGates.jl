@@ -18,15 +18,25 @@ Base.setindex!(f::ParticipationFactor, v, i) = setindex!(f.factors, v, i)
 
 _load_json(v, ::Type{ParticipationFactor}) = ParticipationFactor(v)
 _to_json(v::ParticipationFactor) = v.factors
+Base.:(==)(v1::ParticipationFactor, v2::ParticipationFactor) = v1.factors == v2.factors
+Base.hash(v::ParticipationFactor, h::UInt) = hash(v.factors, hash(:ParticipationFactor, h))
 
 _load_json(v, ::Type{SysMetadata}) = SysMetadata(get(v, "units", Dict{String,String}()),
                                                  get(v, "structure", ""))
 _to_json(v::SysMetadata) = Dict("units"=>v.units, "structure"=>v.structure)
+Base.:(==)(v1::SysMetadata, v2::SysMetadata) =
+    v1.units == v2.units && v1.structure == v2.structure
+Base.hash(v::SysMetadata, h::UInt) =
+    hash(v.units, hash(v.structure, hash(:SysMetadata, h)))
 
 _load_json(v, ::Type{Modes}) = Modes(radial1=v["radial"],
                                      radial2=get(v, "radial2", Float64[]),
                                      axial=get(v, "axial", Float64[]))
 _to_json(v::Modes) = Dict("radial"=>v.radial1, "radial2"=>v.radial2, "axial"=>v.axial)
+Base.:(==)(v1::Modes, v2::Modes) =
+    v1.radial1 == v2.radial1 && v1.radial2 == v2.radial2 && v1.axial == v2.axial
+Base.hash(v::Modes, h::UInt) =
+    hash(v.radial1, hash(v.radial2, hash(v.axial, hash(:Modes, h))))
 
 _load_json(v, ::Type{SystemParams}) =
     SystemParams(modes=Modes(radial1=v["radial_modes"]),
@@ -41,6 +51,18 @@ _to_json(v::SystemParams) = Dict("radial_modes"=>v.modes.radial1,
                                                                v.participation_factors],
                                  "dac_terms"=>v.dac_terms,
                                  "metadata"=>_to_json(v.metadata))
+Base.:(==)(v1::SystemParams, v2::SystemParams) =
+    (v1.modes == v2.modes && v1.lamb_dicke_parameters == v2.lamb_dicke_parameters &&
+    v1.participation_factors == v2.participation_factors &&
+    v1.dac_terms == v2.dac_terms && v1.metadata == v2.metadata)
+function Base.hash(v::SystemParams, h::UInt)
+    h = hash(:SystemParams, h)
+    h = hash(v.metadata, h)
+    h = hash(v.dac_terms, h)
+    h = hash(v.participation_factors, h)
+    h = hash(v.lamb_dicke_parameters, h)
+    return hash(v.modes, h)
+end
 
 _load_json(v, ::Type{XXSolution}) = XXSolution(nsteps=v["nsteps"],
                                                angle_sign=v["angle_sign"],
@@ -54,12 +76,30 @@ _to_json(v::XXSolution) = Dict("nsteps"=>v.nsteps,
                                "time"=>v.time,
                                "phase"=>v.phase, "phase_slope"=>v.phase_slope,
                                "amp"=>v.amp, "amp_slope"=>v.amp_slope)
+Base.:(==)(v1::XXSolution, v2::XXSolution) =
+    (v1.nsteps == v2.nsteps && v1.angle_sign == v2.angle_sign && v1.time == v2.time &&
+    v1.phase == v2.phase && v1.phase_slope == v2.phase_slope &&
+    v1.amp == v2.amp && v1.amp_slope == v2.amp_slope)
+function Base.hash(v::XXSolution, h::UInt)
+    h = hash(:XXSolution, h)
+    h = hash(v.amp_slope, h)
+    h = hash(v.amp, h)
+    h = hash(v.phase_slope, h)
+    h = hash(v.phase, h)
+    h = hash(v.time, h)
+    h = hash(v.angle_sign, h)
+    return hash(v.nsteps, h)
+end
 
 _load_json(v, ::Type{GateSolutionSet}) =
     GateSolutionSet(params=SystemParams(modes=_load_json(v["modes"], Modes)),
                     XX=Dict(k=>_load_json(v, XXSolution) for (k, v) in v["XX"]))
 _to_json(v::GateSolutionSet) = Dict("modes"=>_to_json(v.params.modes),
                                     "XX"=>Dict(k=>_to_json(v) for (k, v) in v.XX))
+Base.:(==)(v1::GateSolutionSet, v2::GateSolutionSet) =
+    v1.params == v2.params && v1.XX == v2.XX
+Base.hash(v::GateSolutionSet, h::UInt) =
+    hash(v.params, hash(v.XX, hash(:GateSolutionSet, h)))
 
 function _verify_num_modes(modes::Modes)
     if isempty(modes.radial1)
