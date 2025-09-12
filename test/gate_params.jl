@@ -2,7 +2,7 @@
 
 module GateParams
 
-using GoldGates
+import GoldGates as GG
 using GoldGates: ParticipationFactor, XXSolution, SysMetadata, Modes,
     SystemParams, GateSolutionSet
 
@@ -37,10 +37,16 @@ using Test
     pf3 = PB.decode(decoder, ParticipationFactor)
     @test pf.factors == pf3.factors
 
-    js = GoldGates._to_json(pf2)
+    js = GG._to_json(pf2)
     @test js === pf2.factors
-    pf4 = GoldGates._load_json(js, ParticipationFactor)
+    pf4 = GG._load_json(js, ParticipationFactor)
     @test pf4.factors === pf2.factors
+
+    @test GG.vv2m(ParticipationFactor[]) == zeros(0, 0)
+    @test GG.vv2m(Vector{Float64}[]) == zeros(0, 0)
+    @test GG.vv2m([pf, pf2]) == [0.1 0.9 0.3; 0.1 0.2 0.3]
+    @test GG.vv2m([[0.1, 0.9, 0.3], [0.1, 0.2, 0.3]]) == [0.1 0.9 0.3; 0.1 0.2 0.3]
+    @test GG.m2vv([0.1 0.9 0.3; 0.1 0.2 0.3]) == [[0.1, 0.9, 0.3], [0.1, 0.2, 0.3]]
 end
 
 end

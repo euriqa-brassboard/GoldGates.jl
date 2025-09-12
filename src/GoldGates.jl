@@ -191,7 +191,11 @@ function vv2m(vv)
     ncol = length(vv[1])
     m = Matrix{Float64}(undef, nrow, ncol)
     for i in 1:nrow
-        m[i, :] = vv[i]
+        v = vv[i]
+        for j in 1:ncol
+            e = v[j]
+            @inbounds m[i, j] = e
+        end
     end
     return m
 end
