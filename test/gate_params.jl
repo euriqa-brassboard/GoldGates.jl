@@ -262,6 +262,15 @@ end
     check_pb(solset)
     check_pb(solset2)
 
+    @test GG.verify(GateSolutionSet()) == GateSolutionSet()
+    @test GG.verify(solset) === solset
+    @test GG.verify(solset2) === solset2
+    @test_throws(ArgumentError, "Solution time count mismatch",
+                 GG.verify(GateSolutionSet(XX=Dict("1,2"=>XXSolution(nsteps=3,
+                                                                     angle_sign=-1,
+                                                                     time=[1.0])))))
+    @test_throws ArgumentError "Mode missing" GG.verify(GateSolutionSet(params=SystemParams()))
+
     check_json(solset2)
     solset3 = GG._load_json(GG._to_json(solset), GateSolutionSet)
     @test solset3 != solset
