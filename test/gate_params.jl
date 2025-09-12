@@ -42,6 +42,25 @@ function check_json(v::T) where T
     return js
 end
 
+function _check_io(v::T, format) where T
+    io = IOBuffer()
+    write(io, v; format=format)
+    seekstart(io)
+    v2 = read(io, T; format=format)
+    @test v == v2
+    @test isbitstype(T) || v !== v2
+    @test hash(v) == hash(v2)
+end
+
+function check_io(v::T, test_json=true) where T
+    _check_io(v, :protobuf)
+    if test_json
+        _check_io(v, :json)
+    end
+    @test_throws ArgumentError "Unknown format" write(IOBuffer(), v; format=:unknown)
+    @test_throws ArgumentError "Unknown format" read(IOBuffer(), T; format=:unknown)
+end
+
 @testset "ParticipationFactor" begin
     pf = ParticipationFactor([0.1, 0.2, 0.3])
     pf2 = ParticipationFactor(factors=[0.1, 0.2, 0.3])
@@ -175,6 +194,9 @@ end
     @test params3 != params
     @test isempty(params3.modes.radial2)
     @test isempty(params3.modes.axial)
+
+    check_io(params, false)
+    check_io(params2)
 end
 
 @testset "XXSolution" begin
@@ -280,6 +302,10 @@ end
     @test isempty(solset3.params.participation_factors)
     @test isempty(solset3.params.dac_terms)
     @test isnothing(solset3.params.metadata)
+
+    check_io(GateSolutionSet(), false)
+    check_io(solset, false)
+    check_io(solset2)
 end
 
 end
