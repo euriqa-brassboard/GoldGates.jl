@@ -213,8 +213,8 @@ function Base.write(io::IO, v::GateSolutionSet; format=:protobuf)
     return
 end
 
-function XXSolution(params::Seq.RawParams, angle_sign)
-    d = Seq.gate_solution_info(params)
+function XXSolution(params::Seq.RawParams, angle_sign; kws...)
+    d = Seq.gate_solution_info(params; kws...)
     d["angle_sign"] = sign(angle_sign)
     return verify(_load_json(d, XXSolution))
 end

@@ -8,6 +8,8 @@ import GoldGates as GG
 using GoldGates: ParticipationFactor, XXSolution, SysMetadata, Modes,
     SystemParams, GateSolutionSet
 
+import MSSim: Sequence as Seq
+
 import ProtoBuf as PB
 
 function _check_pb(v::T, extra_fld) where T
@@ -253,6 +255,19 @@ end
 
     check_json(sol)
     check_json(sol2)
+
+    params = Seq.RawParams(rand(25))
+    time = params.args[1:5:end]
+    amp = params.args[2:5:end]
+    amp_slope = params.args[3:5:end]
+    phase = params.args[4:5:end] ./ 2π
+    phase_slope = params.args[5:5:end] ./ 2π
+    @test XXSolution(params, 1.2, normalize_amp=false) ==
+        XXSolution(nsteps=5, angle_sign=1, time=time, amp=amp, amp_slope=amp_slope,
+                   phase=phase, phase_slope=phase_slope)
+    @test XXSolution(params, -0.1, normalize_amp=false) ==
+        XXSolution(nsteps=5, angle_sign=-1, time=time, amp=amp, amp_slope=amp_slope,
+                   phase=phase, phase_slope=phase_slope)
 end
 
 @testset "GateSolutionSet" begin
