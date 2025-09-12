@@ -152,4 +152,35 @@ end
     @test isempty(params3.modes.axial)
 end
 
+@testset "XXSolution" begin
+    sol = XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4], [0.1, -0.1, 0.2],
+                     [0.3, 1.0, 0.3], [0.2, -0.2, 0.4])
+    sol2 = XXSolution(nsteps=3, angle_sign=-1,
+                      time=[1.0, 2.0, 3.0],
+                      phase=[0.1, 0.3, 0.4],
+                      phase_slope=[0.1, -0.1, 0.2],
+                      amp=[0.3, 1.0, 0.3],
+                      amp_slope=[0.2, -0.2, 0.4])
+    @test sol == sol2
+    sol2.time[2] = 0.1
+    sol2.phase[3] = 0.1
+    sol2.phase_slope[1] = -0.2
+    sol2.amp[3] = 0.2
+    sol2.amp_slope[1] = -0.1
+    @test sol != sol2
+
+    @test PB.default_values(XXSolution) == (;nsteps=0, angle_sign=0, time=Float64[],
+                                            phase=Float64[], phase_slope=Float64[],
+                                            amp=Float64[], amp_slope=Float64[])
+    @test PB.field_numbers(XXSolution) == (;nsteps=1, angle_sign=2, time=3,
+                                           phase=4, phase_slope=5, amp=6, amp_slope=7)
+
+    check_pb(XXSolution())
+    check_pb(sol)
+    check_pb(sol2)
+
+    check_json(sol)
+    check_json(sol2)
+end
+
 end
