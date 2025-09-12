@@ -119,4 +119,37 @@ end
     @test GG._load_json(Dict("radial"=>[0.1, 0.2]), Modes) == Modes(radial1=[0.1, 0.2])
 end
 
+@testset "SystemParams" begin
+    modes = Modes([1.2, 3.4, 3.4], [0.3, 0.1, 0.4], [1, 2, 3])
+    pf1 = ParticipationFactor([0.1, 0.2, 0.3])
+    pf2 = ParticipationFactor([0.2, 0.1, -0.3])
+    pf3 = ParticipationFactor([0.5, -0.1, -0.4])
+    sysmeta = SysMetadata(Dict("A"=>"B", "C"=>"D"), "abc")
+    params = SystemParams(modes, [0.1, 0.3, 0.2], [pf1, pf2, pf3],
+                          Dict("x2"=>0.1, "xy"=>0.2), sysmeta)
+    params2 = SystemParams(modes=Modes(radial1=[1.2, 3.4, 3.4]),
+                           participation_factors=[pf1, pf2, pf3],
+                           lamb_dicke_parameters=[0.1, 0.3, 0.2],
+                           dac_terms=Dict("x2"=>0.1, "xy"=>0.2), metadata=sysmeta)
+    @test params != params2
+
+    @test PB.default_values(SystemParams) ==
+        (;modes = nothing, lamb_dicke_parameters = Float64[],
+         participation_factors = ParticipationFactor[],
+         dac_terms = Dict{String,Float64}(), metadata = nothing)
+    @test PB.field_numbers(SystemParams) == (;modes = 1, lamb_dicke_parameters = 2,
+                                             participation_factors = 3, dac_terms = 4,
+                                             metadata = 5)
+
+    check_pb(SystemParams())
+    check_pb(params)
+    check_pb(params2)
+
+    check_json(params2)
+    params3 = GG._load_json(GG._to_json(params), SystemParams)
+    @test params3 != params
+    @test isempty(params3.modes.radial2)
+    @test isempty(params3.modes.axial)
+end
+
 end
