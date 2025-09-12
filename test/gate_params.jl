@@ -2,13 +2,13 @@
 
 module GateParams
 
+include("test_utils.jl")
+
 import GoldGates as GG
 using GoldGates: ParticipationFactor, XXSolution, SysMetadata, Modes,
     SystemParams, GateSolutionSet
 
 import ProtoBuf as PB
-
-using Test
 
 function _check_pb(v::T, extra_fld) where T
     io = IOBuffer()
