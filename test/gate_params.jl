@@ -10,11 +10,16 @@ import ProtoBuf as PB
 
 using Test
 
-function check_pb(v::T) where T
+function _check_pb(v::T, extra_fld) where T
     io = IOBuffer()
     encoder = PB.ProtoEncoder(io)
     PB.encode(encoder, v)
-    @test PB._encoded_size(v) == io.size
+    if extra_fld
+        max_fld = maximum(PB.field_numbers(T))
+        PB.encode(encoder, max_fld + 1, 1.2)
+    else
+        @test PB._encoded_size(v) == io.size
+    end
     seekstart(io)
 
     decoder = PB.ProtoDecoder(io)
@@ -22,6 +27,11 @@ function check_pb(v::T) where T
     @test v == v2
     @test isbitstype(T) || v !== v2
     @test hash(v) == hash(v2)
+end
+
+function check_pb(v)
+    _check_pb(v, false)
+    _check_pb(v, true)
 end
 
 function check_json(v::T) where T
