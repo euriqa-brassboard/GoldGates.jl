@@ -135,7 +135,8 @@ end
     sysmeta = SysMetadata(Dict("A"=>"B", "C"=>"D"), "abc")
     params = SystemParams(modes, [0.1, 0.3, 0.2], [pf1, pf2, pf3],
                           Dict("x2"=>0.1, "xy"=>0.2), sysmeta)
-    params2 = SystemParams(modes=Modes(radial1=[1.2, 3.4, 3.4]),
+    modes2 = Modes(radial1=[1.2, 3.4, 3.4])
+    params2 = SystemParams(modes=modes2,
                            participation_factors=[pf1, pf2, pf3],
                            lamb_dicke_parameters=[0.1, 0.3, 0.2],
                            dac_terms=Dict("x2"=>0.1, "xy"=>0.2), metadata=sysmeta)
@@ -152,6 +153,22 @@ end
     check_pb(SystemParams())
     check_pb(params)
     check_pb(params2)
+
+    @test GG.verify(params) === params
+    @test GG.verify(params2) === params2
+    @test_throws ArgumentError "Radial mode missing" GG.verify(SystemParams(modes=Modes()))
+    @test_throws ArgumentError "Mode missing" GG.verify(SystemParams())
+    @test GG.verify(SystemParams(modes=modes)) == SystemParams(modes=modes)
+    @test GG.verify(SystemParams(modes=modes2)) == SystemParams(modes=modes2)
+    @test_throws(ArgumentError, "Lamb Dikie parameters length mismatch",
+                 GG.verify(SystemParams(modes=modes,
+                                        lamb_dicke_parameters=[0.1, 0.3, 0.2, 2])))
+    @test_throws(ArgumentError, "Mode participation factors length mismatch",
+                 GG.verify(SystemParams(modes=modes, participation_factors=[pf1, pf2])))
+    @test_throws(ArgumentError, "Mode participation factors ion count mismatch",
+                 GG.verify(SystemParams(modes=modes,
+                                        participation_factors=[pf1, pf2,
+                                                               ParticipationFactor()])))
 
     check_json(params2)
     params3 = GG._load_json(GG._to_json(params), SystemParams)
