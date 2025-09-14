@@ -3,8 +3,9 @@
 module ThreadUtils
 
 using Base.Threads
+using Base.Iterators
 
-export ThreadObjectPool
+export ThreadObjectPool, eachobj
 
 mutable struct ObjSlot{T}
     @atomic value::Union{T,Nothing}
@@ -23,7 +24,7 @@ mutable struct ThreadObjectPool{T,CB}
     function ThreadObjectPool(cb::CB) where CB
         obj = cb()
         T = typeof(obj)
-        array = [ObjSlot{T}(i == 1 ? obj : nothing) for i in 1:Threads.maxthreadid()]
+        array = [ObjSlot{T}(obj)]
         return new{T,CB}(ReentrantLock(), cb, array, T[])
     end
 end
@@ -68,6 +69,11 @@ function Base.put!(pool::ThreadObjectPool{T}, obj::T) where T
         push!(pool.extra, obj)
     end
     return
+end
+
+function eachobj(pool::ThreadObjectPool{T}) where T
+    normal_vals = ((@atomic :unordered s.value) for s in (@atomic :unordered pool.array))
+    return Iterators.flatten(((v for v in normal_vals if v !== nothing), pool.extra))
 end
 
 end
