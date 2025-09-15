@@ -87,9 +87,18 @@ function PB._encoded_size(x::Candidates)
     return encoded_size
 end
 
-Base.Dict(c::Candidate) = Dict("param"=>c.param, "props"=>Dict(c.props))
-Candidate(d::Dict{<:AbstractString}) = Candidate(copy(d["param"]),
-                                                 Seq.SolutionProperties(d["props"]))
+function Base.Dict(c::Candidate)
+    d = Dict{String,Any}("param"=>c.param)
+    if c.props !== nothing
+        d["props"] = Dict(c.props)
+    end
+    return d
+end
+function Candidate(d::Dict{<:AbstractString})
+    props = get(d, "props", nothing)
+    return Candidate(d["param"],
+                     props === nothing ? nothing : Seq.SolutionProperties(props))
+end
 
 function load_candidates_json(io::IO)
     data = JSON.parse(io)
