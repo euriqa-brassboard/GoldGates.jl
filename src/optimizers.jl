@@ -4,7 +4,7 @@ module Optimizers
 
 import MSSim: Optimizers as Opts, SegSeq as SS, SymLinear as SL, Sequence as Seq, Utils as U
 
-import ..set_mode_weight!, ..vv2m, ..m2vv, ..Candidate, ..ThreadObjectPool
+import ..set_mode_weight!, ..vv2m, ..m2vv, ..Candidate, ..ThreadObjectPool, ..eachobj
 
 using NLopt
 
@@ -136,11 +136,11 @@ function opt_all_rounds!(pool::ThreadObjectPool{PreOpt},
         for _ in 1:nrounds
             opt_one!(o)
         end
-        @lock pool.lock begin
-            append!(candidates, o.candidates)
-        end
-        empty!(o.candidates)
         put!(pool, o)
+    end
+    for o in eachobj(pool)
+        append!(candidates, o.candidates)
+        empty!(o.candidates)
     end
     return candidates
 end
