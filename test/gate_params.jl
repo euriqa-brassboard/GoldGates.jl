@@ -6,7 +6,7 @@ include("test_utils.jl")
 
 import GoldGates as GG
 using GoldGates: ParticipationFactor, XXSolution, SysMetadata, Modes,
-    SystemParams, GateSolutionSet
+    SystemParams, GateSolutionSet, set_mode_weight!
 
 import MSSim: Sequence as Seq
 
@@ -295,6 +295,23 @@ end
     check_io(GateSolutionSet(), false)
     check_io(solset, false)
     check_io(solset2)
+end
+
+@testset "Mode weight" begin
+    w = zeros(3)
+    ηs = [0.2, 0.5, 0.7]
+    bij = Float64[1 2 10
+                  -1 -2 -3
+                  5 -3 2]
+    function check_mode(ion1, ion2, wexpect)
+        @test set_mode_weight!(w, ηs, bij, ion1, ion2) === w
+        @test w ≈ wexpect
+        @test set_mode_weight!(w, ηs, bij, ion2, ion1) === w
+        @test w ≈ wexpect
+    end
+    check_mode(1, 2, [2 * 0.2^2, 2 * 0.5^2, -15 * 0.7^2])
+    check_mode(1, 3, [10 * 0.2^2, 3 * 0.5^2, 10 * 0.7^2])
+    check_mode(2, 3, [20 * 0.2^2, 6 * 0.5^2, -6 * 0.7^2])
 end
 
 end
