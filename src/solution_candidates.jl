@@ -16,6 +16,8 @@ struct Candidate
 end
 PB.default_values(::Type{Candidate}) = (;param = Vector{Float64}(), props = nothing)
 PB.field_numbers(::Type{Candidate}) = (;param = 1, props = 2)
+Base.:(==)(v1::Candidate, v2::Candidate) = v1.param == v2.param && v1.props == v2.props
+Base.hash(v::Candidate, h::UInt) = hash(v.param, hash(v.props, hash(:Candidate, h)))
 
 function PB.decode(d::PB.AbstractProtoDecoder, ::Type{<:Candidate})
     param = PB.BufferedVector{Float64}()
@@ -52,6 +54,9 @@ struct Candidates
 end
 PB.default_values(::Type{Candidates}) = (;candidates = Vector{Candidate}(), meta = "")
 PB.field_numbers(::Type{Candidates}) = (;candidates = 1, meta = 2)
+Base.:(==)(v1::Candidates, v2::Candidates) =
+    v1.candidates == v2.candidates && v1.meta == v2.meta
+Base.hash(v::Candidates, h::UInt) = hash(v.candidates, hash(v.meta, hash(:Candidates, h)))
 
 function PB.decode(d::PB.AbstractProtoDecoder, ::Type{<:Candidates})
     candidates = PB.BufferedVector{Candidate}()
