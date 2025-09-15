@@ -8,12 +8,15 @@ import MSSim: Sequence as Seq
 
 using GoldGates: Candidate, load_candidates_files, load_candidates_dir,
     load_candidates_dirs, save_candidates
+using GoldGates.SolutionCandidates: Candidates
 
 @testset "Candidates" begin
     cand = Candidate([0.1, 0.2, 0.3], nothing)
     cand2 = Candidate([0.1, 0.2, 0.3],
                       Seq.SolutionProperties(0.2, [1.2, 3], [0.12, 0.1], [0.0, -0.01],
                                              [1.0, 0.2], [0.1, 2.3], [-0.2, 0.3]))
+    @test cand == cand
+    @test cand2 == cand2
     @test cand != cand2
     @test hash(cand) != hash(cand2)
 
@@ -31,6 +34,19 @@ using GoldGates: Candidate, load_candidates_files, load_candidates_dir,
     @test js2 == Dict("param"=>cand2.param,
                       "props"=>Dict(cand2.props))
     @test Candidate(js2) == cand2
+
+
+    cs = Candidates([cand], "")
+    cs2 = Candidates([cand, cand2], "{\"a\": 2}")
+    @test cs == cs
+    @test cs2 == cs2
+    @test hash(cs) != hash(cs2)
+
+    @test PB.default_values(Candidates) == (;candidates=Candidate[], meta="")
+    @test PB.field_numbers(Candidates) == (;candidates=1, meta=2)
+
+    check_pb(cs)
+    check_pb(cs2)
 end
 
 end
