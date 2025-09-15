@@ -118,7 +118,7 @@ function load_candidates_pb(io::IO)
 end
 
 function load_candidates_files(files; candidates=Candidate[], meta=nothing)
-    results = Dict{String,Tuple{Dict,Vector{Candidate}}}()
+    results = Dict{String,Tuple{Any,Vector{Candidate}}}()
     lock = ReentrantLock()
     @threads :greedy for f in files
         if endswith(f, ".binpb")
@@ -132,7 +132,7 @@ function load_candidates_files(files; candidates=Candidate[], meta=nothing)
         file_meta, file_candidates = results[f]
         if meta === nothing
             meta = file_meta
-        elseif file_meta != meta
+        elseif file_meta != meta && file_meta !== nothing
             error("Metadata mismatch")
         end
         append!(candidates, file_candidates)
@@ -154,26 +154,26 @@ end
 
 function save_candidates(prefix, candidates, meta; block_size=2000, format=:protobuf)
     ncandidates = length(candidates)
-    meta_str = nothing
-    if format === :protobuf && meta !== nothing
-        meta_str = JSON.json(meta)
-    end
-    @threads :greedy for (i, start_idx) in enumerate(1:block_size:ncandidates)
-        end_idx = min(start_idx + block_size - 1, ncandidates)
-        if format === :protobuf
+    if format === :protobuf
+        meta_str = meta === nothing ? "" : JSON.json(meta)
+        @threads :greedy for (i, start_idx) in enumerate(1:block_size:ncandidates)
+            end_idx = min(start_idx + block_size - 1, ncandidates)
             open("$(prefix)$(@sprintf("%06d", i)).binpb", "w") do io
                 encoder = PB.ProtoEncoder(io)
                 PB.encode(encoder, Candidates(candidates[start_idx:end_idx], meta_str))
             end
-        elseif format === :json
+        end
+    elseif format === :json
+        @threads :greedy for (i, start_idx) in enumerate(1:block_size:ncandidates)
+            end_idx = min(start_idx + block_size - 1, ncandidates)
             open("$(prefix)$(@sprintf("%06d", i)).json", "w") do io
                 d = Dict("meta"=>meta,
                          "candidates"=>Dict.(@view candidates[start_idx:end_idx]))
                 JSON.print(io, d, 2)
             end
-        else
-            throw(ArgumentError("Unknown format $(format) for gate solution candidates"))
         end
+    else
+        throw(ArgumentError("Unknown format $(format) for gate solution candidates"))
     end
 end
 
