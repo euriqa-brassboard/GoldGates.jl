@@ -4,9 +4,11 @@ module Optimizers
 
 import MSSim: Optimizers as Opts, SegSeq as SS, SymLinear as SL, Sequence as Seq, Utils as U
 
-import ..set_mode_weight!, ..vv2m, ..m2vv, ..Candidate, ..ThreadObjectPool, ..eachobj
+import ..set_mode_weight!, ..vv2m, ..m2vv, ..Candidate
 
 using NLopt
+
+using AMO.Utils: ThreadObjectPool, eachobj
 
 using Base.Threads
 

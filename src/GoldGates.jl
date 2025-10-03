@@ -219,8 +219,6 @@ function XXSolution(params::Seq.RawParams, angle_sign; kws...)
     return verify(_load_json(d, XXSolution))
 end
 
-include("thread_utils.jl")
-using .ThreadUtils
 include("solution_candidates.jl")
 import .SolutionCandidates: Candidate,
     load_candidates_files, load_candidates_dir, load_candidates_dirs,
