@@ -124,8 +124,8 @@ function set_time_range!(o::PreOptimizer, τmin, τmax)
     update_bounds!(o)
 end
 
-function opt_all_rounds!(pool::ThreadObjectPool{PreOpt},
-                         nrounds, candidates) where {NSeg,PreOpt<:PreOptimizer{NSeg}}
+function opt_all_rounds!(pool::ThreadObjectPool{PreOpt}, nrounds,
+                         candidates=Candidate[]) where {NSeg,PreOpt<:PreOptimizer{NSeg}}
     o0 = get(pool)
     τs = range(o0.tmin / NSeg, o0.tmax / NSeg, o0.ntimes + 1)
     nions = length(o0.ωs)
