@@ -147,6 +147,28 @@ function opt_all_rounds!(pool::ThreadObjectPool{PreOpt}, nrounds,
     return candidates
 end
 
+mutable struct PairChecker
+    const weights::Vector{Float64}
+    minarea::Float64
+    maxareaδ::Float64
+end
+
+function check(checker::PairChecker, cand::Candidate)
+    weights = checker.weights
+    nmodes = length(weights)
+    props = cand.props
+    @assert length(props.area) == nmodes
+    @assert length(props.areaδ) == nmodes
+    area = 0.0
+    areaδ = 0.0
+    @inbounds @simd for i in 1:nmodes
+        w = weights[i]
+        area += w * props.area[i]
+        areaδ += w * props.areaδ[i]
+    end
+    return abs(area) >= checker.minarea && abs(areaδ) < checker.maxareaδ
+end
+
 struct PairOptimizer{NSeg,AreaObj,Sum}
     ωs::Vector{Float64}
     ηs::Vector{Float64}
