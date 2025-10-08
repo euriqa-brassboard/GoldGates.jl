@@ -9,7 +9,7 @@ macro test_throws(arg1, arg2)
 end
 
 macro test_throws(arg1, arg2, arg3)
-    if VERSION >= v"1.12"
+    if VERSION >= v"1.13.0-DEV"
         :(Test.@test_throws $(esc(arg1)) $(esc(arg2)) $(esc(arg3)))
     else
         :(Test.@test_throws $(esc(arg1)) $(esc(arg3)))
