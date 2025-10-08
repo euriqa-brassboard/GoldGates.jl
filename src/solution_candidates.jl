@@ -117,16 +117,22 @@ function load_candidates_pb(io::IO)
     return meta, candidates.candidates
 end
 
-function load_candidates_files(files; candidates=Candidate[], meta=nothing)
-    results = Dict{String,Tuple{Any,Vector{Candidate}}}()
-    lock = ReentrantLock()
+function load_candidates_files(@specialize(cb), files)
     @threads :greedy for f in files
         if endswith(f, ".binpb")
             res = open(load_candidates_pb, f)
         else
             res = open(load_candidates_json, f)
         end
-        @lock lock results[f] = res
+        @inline cb(f, res...)
+    end
+end
+
+function load_candidates_files(files; candidates=Candidate[], meta=nothing)
+    results = Dict{String,Tuple{Any,Vector{Candidate}}}()
+    lock = ReentrantLock()
+    load_candidates_files(files) do f, meta, candidates
+        @lock lock results[f] = (meta, candidates)
     end
     for f in files
         file_meta, file_candidates = results[f]
@@ -140,16 +146,21 @@ function load_candidates_files(files; candidates=Candidate[], meta=nothing)
     return meta, candidates
 end
 
-function load_candidates_dir(dir; kwargs...)
-    return load_candidates_files(readdir(dir, join=true); kwargs...)
+_getarg(arg1) = (), arg1
+_getarg(arg0, arg1) = (arg0,), arg1
+
+function load_candidates_dir(args...; kwargs...)
+    args, dir = _getarg(args...)
+    return load_candidates_files(args..., readdir(dir, join=true); kwargs...)
 end
 
-function load_candidates_dirs(dirs; kwargs...)
+function load_candidates_dirs(args...; kwargs...)
+    args, dirs = _getarg(args...)
     files = String[]
     for dir in dirs
         append!(files, readdir(dir, join=true))
     end
-    return load_candidates_files(files; kwargs...)
+    return load_candidates_files(args..., files; kwargs...)
 end
 
 function save_candidates(prefix, candidates, meta; block_size=2000, format=:protobuf)
