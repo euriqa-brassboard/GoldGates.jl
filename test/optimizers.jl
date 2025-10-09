@@ -20,11 +20,18 @@ pre_pool = ThreadObjectPool() do
 end
 candidates = Optimizers.opt_all_rounds!(pre_pool, 30)
 
+checker3 = Optimizers.PairChecker([0.2, 0.2, 0.2, 0, 0, 0], 10, 90)
+
+selected_candidates = [cand for cand in candidates if Optimizers.check(checker3, cand)]
+
 @testset "PreOptimizer" begin
     @test !isempty(candidates)
 end
 
 @testset "PairChecker" begin
+    @test !isempty(selected_candidates)
+    @test Optimizers.find_best(checker3, selected_candidates) !== nothing
+
     checker = Optimizers.PairChecker([0.1, 0.2], 2, 0.05)
     function dummy_cand(area, areaδ)
         cand = Candidate([0.1, 0.2, 0.3],

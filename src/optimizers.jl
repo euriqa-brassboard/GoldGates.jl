@@ -174,6 +174,41 @@ function check(checker::PairChecker, cand::Candidate)
     return area >= checker.minarea && areaδ < checker.maxareaδ * area
 end
 
+function find_best(checker::PairChecker, candidates)
+    weights = checker.weights
+    nmodes = length(weights)
+
+    min_rel_areaδ = Inf
+    for cand in candidates
+        area, areaδ = _calc_areas(weights, cand.props, nmodes)
+        min_rel_areaδ = min(min_rel_areaδ, areaδ / area)
+    end
+
+    function objective(total_time, area, areaδ)
+        # Give less weight to areaδ if it's ~< 10% of threshold
+        o1 = areaδ / area + checker.maxareaδ / 10
+        o2 = area + checker.minarea
+        return (total_time^2 * o1 / o2, total_time, areaδ)
+    end
+
+    rel_areaδ_thresh = min_rel_areaδ * 3
+
+    best = nothing
+    best_obj = (Inf, Inf, Inf)
+    for cand in candidates
+        area, areaδ = _calc_areas(weights, cand.props, nmodes)
+        if areaδ > area * rel_areaδ_thresh
+            continue
+        end
+        obj = objective(cand.props.total_time, area, areaδ)
+        if best_obj > obj
+            best = cand
+            best_obj = obj
+        end
+    end
+    return best
+end
+
 struct PairOptimizer{NSeg,AreaObj,Sum}
     ωs::Vector{Float64}
     ηs::Vector{Float64}
@@ -291,5 +326,9 @@ function opt_pair!(o::PairOptimizer, args, area, weights;
     props = get(o.sum, raw_params, o.modes)
     return Candidate(args, props)
 end
+
+precompile(PairChecker, (Vector{Float64}, Float64, Float64))
+precompile(check, (PairChecker, Candidate))
+precompile(find_best, (PairChecker, Vector{Candidate}))
 
 end
