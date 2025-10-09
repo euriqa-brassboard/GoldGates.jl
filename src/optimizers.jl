@@ -153,12 +153,7 @@ mutable struct PairChecker
     maxareaδ::Float64
 end
 
-function check(checker::PairChecker, cand::Candidate)
-    weights = checker.weights
-    nmodes = length(weights)
-    props = cand.props
-    @assert length(props.area) == nmodes
-    @assert length(props.areaδ) == nmodes
+function _calc_areas(weights, props, nmodes)
     area = 0.0
     areaδ = 0.0
     @inbounds @simd for i in 1:nmodes
@@ -166,7 +161,17 @@ function check(checker::PairChecker, cand::Candidate)
         area += w * props.area[i]
         areaδ += w * props.areaδ[i]
     end
-    return abs(area) >= checker.minarea && abs(areaδ) < checker.maxareaδ
+    return abs(area), abs(areaδ)
+end
+
+function check(checker::PairChecker, cand::Candidate)
+    weights = checker.weights
+    nmodes = length(weights)
+    props = cand.props
+    @assert length(props.area) == nmodes
+    @assert length(props.areaδ) == nmodes
+    area, areaδ = _calc_areas(weights, props, nmodes)
+    return area >= checker.minarea && areaδ < checker.maxareaδ * area
 end
 
 struct PairOptimizer{NSeg,AreaObj,Sum}

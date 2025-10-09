@@ -25,7 +25,7 @@ candidates = Optimizers.opt_all_rounds!(pre_pool, 30)
 end
 
 @testset "PairChecker" begin
-    checker = Optimizers.PairChecker([0.1, 0.2], 2, 0.1)
+    checker = Optimizers.PairChecker([0.1, 0.2], 2, 0.05)
     function dummy_cand(area, areaδ)
         cand = Candidate([0.1, 0.2, 0.3],
                          Seq.SolutionProperties(0.2, [1.2, 3], [1e-3, 1e-8], [1e-2, -2e-7],
