@@ -142,3 +142,5 @@ last_rid.pyon
 /Manifest.toml
 
 data
+
+/out/*.json
