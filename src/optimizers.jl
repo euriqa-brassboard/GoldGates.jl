@@ -35,7 +35,7 @@ struct PreOptimizer{NSeg,PreObj,Sum}
 
     function PreOptimizer{NSeg}(ωs, ωs2; tmin, tmax, ntimes=11, ωmin, ωmax,
                                 amp_ratio=0.7, maxiter=2500,
-                                disδ_weight=0.01) where NSeg
+                                dis2_weight=0.01, disδ_weight=0.01) where NSeg
         nions = length(ωs)
         modes = Seq.Modes()
         for ω in ωs
@@ -52,11 +52,13 @@ struct PreOptimizer{NSeg,PreObj,Sum}
         freq_spec = Seq.FreqSpec(true, sym=false)
         amp_spec = Seq.AmpSpec(cb=U.BlackmanStartEnd{amp_ratio}())
 
-        pre_obj = Opts.abs_area_obj(NSeg, modes, SL.pmask_tfm,
+        pre_obj = Opts.abs_area_obj(NSeg, modes2, SL.pmask_tfm,
                                     freq=freq_spec, amp=amp_spec,
-                                    dis_weights=fill(1, nions),
-                                    disδ_weights=fill(disδ_weight, nions),
-                                    area_weights=zeros(nions))
+                                    dis_weights=[(i <= nions ? 1.0 : dis2_weight)
+                                                 for i in 1:2 * nions],
+                                    disδ_weights=[(i <= nions ? disδ_weight : 0.0)
+                                                 for i in 1:2 * nions],
+                                    area_weights=zeros(nions * 2))
         nargs = Seq.nparams(pre_obj)
         pre_tracker = Opts.NLVarTracker(nargs)
         Opts.set_bound!(pre_tracker, pre_obj.param.Ωs[1], 1, 1)
