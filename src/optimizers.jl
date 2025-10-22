@@ -98,14 +98,16 @@ function opt_one!(o::PreOptimizer)
     nions = length(o.ωs)
 
     dis = 0.0
+    dis2 = 0.0
     disδ = 0.0
     max_area = 0.0
     @inbounds @simd ivdep for i in nions
         dis += abs2(props.dis[i])
+        dis2 += abs2(props.dis[i + nions])
         disδ += abs2(props.disδ[i])
         max_area = max(max_area, abs(props.area[i]))
     end
-    if dis < 1e-6 * nions && disδ < 1e-4 * nions && max_area >= 100
+    if dis < 1e-6 * nions && dis2 < 1e-3 * nions && disδ < 1e-4 * nions && max_area >= 100
         push!(o.candidates, Candidate(copy(args), props))
         return true
     end
