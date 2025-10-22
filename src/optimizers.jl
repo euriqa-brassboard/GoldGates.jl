@@ -38,11 +38,9 @@ struct PreOptimizer{NSeg,PreObj,Sum}
                                 dis2_weight=0.01, disδ_weight=0.01) where NSeg
         nions = length(ωs)
         modes = Seq.Modes()
-        for ω in ωs
-            push!(modes, ω)
-        end
         modes2 = Seq.Modes()
         for ω in ωs
+            push!(modes, ω)
             push!(modes2, ω)
         end
         for ω in ωs2
