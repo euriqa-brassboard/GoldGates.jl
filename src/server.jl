@@ -75,6 +75,7 @@ function searchcandidate(mgr::CandidateManager, nseg, nrounds, ωs, ωs2;
         @lock lock begin
             append!(candidates, new_candidates)
             ncandidates = length(candidates)
+            @info "Candidate buffer size: $(ncandidates)"
             if ncandidates > 10 * block_size
                 nblocks = ncandidates ÷ block_size
                 nsaving = nblocks * block_size
@@ -87,6 +88,13 @@ function searchcandidate(mgr::CandidateManager, nseg, nrounds, ωs, ωs2;
             end
         end
         empty!(new_candidates)
+    end
+
+    if !isempty(candidates)
+        @info "Saving final blocks of candidates"
+        save_candidates(joinpath(datadir, "data"), candidates,
+                        meta, block_size=block_size, start_block=start_block[],
+                        format=:protobuf)
     end
 end
 
