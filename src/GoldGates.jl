@@ -251,4 +251,6 @@ function set_mode_weight!(weights, ηs, bij, ion1, ion2)
 end
 include("optimizers.jl")
 
+include("server.jl")
+
 end
