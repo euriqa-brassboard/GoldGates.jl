@@ -59,7 +59,7 @@ function searchcandidate(mgr::CandidateManager, nseg, nrounds, ωs, ωs2;
     mkpath(datadir)
     ids, files  = _list_datafile(datadir)
 
-    meta = Dict("nseg"=>nseg, amp_ratio=>amp_ratio)
+    meta = Dict("nseg"=>nseg, "amp_ratio"=>amp_ratio)
 
     candidates = Candidate[]
     if isempty(ids)
