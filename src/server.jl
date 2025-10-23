@@ -48,7 +48,7 @@ end
 function searchcandidate(mgr::CandidateManager, nseg, nrounds, ωs, ωs2;
                          amp_ratio=0.7, kws...)
     @assert length(ωs) == mgr.nions
-    @assert length(ωs2) == mgr.nions * 2
+    @assert length(ωs2) == mgr.nions
     pre_pool = ThreadObjectPool() do
         return PreOptimizer{nseg}(ωs, ωs2; amp_ratio=amp_ratio, kws...)
     end
