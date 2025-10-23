@@ -163,20 +163,26 @@ function load_candidates_dirs(args...; kwargs...)
     return load_candidates_files(args..., files; kwargs...)
 end
 
-function save_candidates(prefix, candidates, meta; block_size=2000, format=:protobuf)
+function _block_iter(start_block, block_size, ntotal)
+    range = ((start_block - 1) * block_size + 1):block_size:ntotal
+    return ((i + start_block - 1, start_idx,
+             min(start_idx + block_size - 1, ntotal))
+            for (i, start_idx) in enumerate(range))
+end
+
+function save_candidates(prefix, candidates, meta;
+                         block_size=2000, start_block=1, format=:protobuf)
     ncandidates = length(candidates)
     if format === :protobuf
         meta_str = meta === nothing ? "" : JSON.json(meta)
-        @threads :greedy for (i, start_idx) in enumerate(1:block_size:ncandidates)
-            end_idx = min(start_idx + block_size - 1, ncandidates)
+        @threads :greedy for (i, start_idx, end_idx) in _block_iter(start_block, block_size, ncandidates)
             open("$(prefix)$(@sprintf("%06d", i)).binpb", "w") do io
                 encoder = PB.ProtoEncoder(io)
                 PB.encode(encoder, Candidates(candidates[start_idx:end_idx], meta_str))
             end
         end
     elseif format === :json
-        @threads :greedy for (i, start_idx) in enumerate(1:block_size:ncandidates)
-            end_idx = min(start_idx + block_size - 1, ncandidates)
+        @threads :greedy for (i, start_idx, end_idx) in _block_iter(start_block, block_size, ncandidates)
             open("$(prefix)$(@sprintf("%06d", i)).json", "w") do io
                 d = Dict("meta"=>meta,
                          "candidates"=>Dict.(@view candidates[start_idx:end_idx]))
