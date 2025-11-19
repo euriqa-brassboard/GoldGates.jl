@@ -144,3 +144,5 @@ last_rid.pyon
 data
 
 /out/*.json
+
+*.DS_Store
