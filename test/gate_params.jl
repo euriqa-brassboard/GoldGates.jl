@@ -177,7 +177,7 @@ end
 
 @testset "XXSolution" begin
     sol = XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4], [0.1, -0.1, 0.2],
-                     [0.3, 1.0, 0.3], [0.2, -0.2, 0.4])
+                     [0.3, 1.0, 0.3], [0.2, -0.2, 0.4], "")
     sol2 = XXSolution(nsteps=3, angle_sign=-1,
                       time=[1.0, 2.0, 3.0],
                       phase=[0.1, 0.3, 0.4],
@@ -194,9 +194,9 @@ end
 
     @test PB.default_values(XXSolution) == (;nsteps=0, angle_sign=0, time=Float64[],
                                             phase=Float64[], phase_slope=Float64[],
-                                            amp=Float64[], amp_slope=Float64[])
+                                            amp=Float64[], amp_slope=Float64[], metadata="")
     @test PB.field_numbers(XXSolution) == (;nsteps=1, angle_sign=2, time=3,
-                                           phase=4, phase_slope=5, amp=6, amp_slope=7)
+                                           phase=4, phase_slope=5, amp=6, amp_slope=7, metadata=8)
 
     check_pb(XXSolution())
     check_pb(sol)
@@ -207,25 +207,25 @@ end
     @test_throws(ArgumentError, "Invalid solution angle sign",
                  GG.verify(XXSolution(3, 0, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4],
                                       [0.1, -0.1, 0.2], [0.3, 1.0, 0.3],
-                                      [0.2, -0.2, 0.4])))
+                                      [0.2, -0.2, 0.4], "")))
     @test_throws(ArgumentError, "Solution time count mismatch",
                  GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0, 1.2], [0.1, 0.3, 0.4],
                                       [0.1, -0.1, 0.2], [0.3, 1.0, 0.3],
-                                      [0.2, -0.2, 0.4])))
+                                      [0.2, -0.2, 0.4], "")))
     @test_throws(ArgumentError, "Solution phase count mismatch",
                  GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0], [0.3, 0.4],
                                       [0.1, -0.1, 0.2], [0.3, 1.0, 0.3],
-                                      [0.2, -0.2, 0.4])))
+                                      [0.2, -0.2, 0.4], "")))
     @test_throws(ArgumentError, "Solution phase slope count mismatch",
                  GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4],
-                                      [0.1, -0.1], [0.3, 1.0, 0.3], [0.2, -0.2, 0.4])))
+                                      [0.1, -0.1], [0.3, 1.0, 0.3], [0.2, -0.2, 0.4], "")))
     @test_throws(ArgumentError, "Solution amp count mismatch",
                  GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4],
                                       [0.1, -0.1, 0.2], [0.3, 1.0, 0.3, 0.2],
-                                      [0.2, -0.2, 0.4])))
+                                      [0.2, -0.2, 0.4], "")))
     @test_throws(ArgumentError, "Solution amp slope count mismatch",
                  GG.verify(XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4],
-                                      [0.1, -0.1, 0.2], [0.3, 1.0, 0.3], [0.2, -0.2])))
+                                      [0.1, -0.1, 0.2], [0.3, 1.0, 0.3], [0.2, -0.2], "")))
 
     check_json(sol)
     check_json(sol2)
@@ -246,7 +246,7 @@ end
 
 @testset "GateSolutionSet" begin
     sol = XXSolution(3, -1, [1.0, 2.0, 3.0], [0.1, 0.3, 0.4], [0.1, -0.1, 0.2],
-                     [0.3, 1.0, 0.3], [0.2, -0.2, 0.4])
+                     [0.3, 1.0, 0.3], [0.2, -0.2, 0.4], "")
     sol2 = XXSolution(nsteps=3, angle_sign=1,
                       time=[1.0, 2.0, 1.0],
                       phase=[0.1, 0.3, 0.5],
