@@ -33,6 +33,7 @@ message XXSolution {
   repeated double phase_slope = 5;
   repeated double amp = 6;
   repeated double amp_slope = 7;
+  optional string metadata = 8;
 }
 
 message GateSolutionSet {

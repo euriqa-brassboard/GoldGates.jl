@@ -70,12 +70,14 @@ _load_json(v, ::Type{XXSolution}) = XXSolution(nsteps=v["nsteps"],
                                                phase=v["phase"],
                                                phase_slope=v["phase_slope"],
                                                amp=v["amp"],
-                                               amp_slope=v["amp_slope"])
+                                               amp_slope=v["amp_slope"],
+                                               metadata=get(v, "metadata", ""))
 _to_json(v::XXSolution) = Dict("nsteps"=>v.nsteps,
                                "angle_sign"=>v.angle_sign,
                                "time"=>v.time,
                                "phase"=>v.phase, "phase_slope"=>v.phase_slope,
-                               "amp"=>v.amp, "amp_slope"=>v.amp_slope)
+                               "amp"=>v.amp, "amp_slope"=>v.amp_slope,
+                               "metadata"=>v.metadata)
 Base.:(==)(v1::XXSolution, v2::XXSolution) =
     (v1.nsteps == v2.nsteps && v1.angle_sign == v2.angle_sign && v1.time == v2.time &&
     v1.phase == v2.phase && v1.phase_slope == v2.phase_slope &&
@@ -213,9 +215,16 @@ function Base.write(io::IO, v::GateSolutionSet; format=:protobuf)
     return
 end
 
-function XXSolution(params::Seq.RawParams, angle_sign; kws...)
+function XXSolution(params::Seq.RawParams, angle_sign; metadata=nothing, kws...)
     d = Seq.gate_solution_info(params; kws...)
+
     d["angle_sign"] = sign(angle_sign)
+
+    # Optionally attach arbitrary metadata
+    if metadata !== nothing
+        d["metadata"] = metadata
+    end
+
     return verify(_load_json(d, XXSolution))
 end
 
