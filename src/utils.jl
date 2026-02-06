@@ -89,13 +89,32 @@ function setup_optimizer(nlmodel, sysparams; pitime=30, τmin=5, τmax=50, maxti
     return opt, tracker
 end
 
-function run_optimization!(opt, tracker, nlmodel; iterations=300, threshold=-Inf)
+function perturb_params(params, tracker, scale)
+    result = copy(params)
+    lb = Opts.lower_bounds(tracker)
+    ub = Opts.upper_bounds(tracker)
+    for i in eachindex(result)
+        r = (ub[i] - lb[i]) * scale
+        result[i] = clamp(params[i] + randn() * r, lb[i], ub[i])
+    end
+    return result
+end
+
+function run_optimization!(opt, tracker, nlmodel; threshold=-Inf,
+                           initial_params=nothing, perturbation=0.05)
+    iterations = initial_params === nothing ? 300 : 50
     best_obj = Inf
     best_params = nothing
 
     @time for i in 1:iterations
-        initial_params = Opts.init_vars!(tracker)
-        obj, params, ret = NLopt.optimize(opt, initial_params)
+        if initial_params === nothing
+            start_params = Opts.init_vars!(tracker)
+        elseif i == 1
+            start_params = copy(initial_params)
+        else
+            start_params = perturb_params(initial_params, tracker, perturbation)
+        end
+        obj, params, ret = NLopt.optimize(opt, start_params)
         if getfield(NLopt, ret) < 0
             continue
         end
@@ -123,7 +142,8 @@ function run_optimization!(opt, tracker, nlmodel; iterations=300, threshold=-Inf
     return best_params, best_obj
 end
 
-function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes)
+function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes;
+                               ion1, ion2, pitime, τmin, τmax, maxtime, min_mode_index, max_mode_index)
     buf_plot = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full));
     kern = SL.Kernel(buf_plot, Val(SL.pmask_full));
     opt_raw_params = Seq.RawParams(nlmodel, best_params)
@@ -158,9 +178,11 @@ function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes)
     axes[4].set_xlabel("Frequency offset (kHz)")
     axes[4].set_ylabel("Total Area")
     axes[4].grid(true)
-    tight_layout()
 
     total_gate_time = best_params[nlmodel.param.τ] * nseg
+    carrier_pi_time = π / maximum(Ωs) / 2
+    fig.suptitle("Pair $ion1:$ion2, Gate time: $(round(total_gate_time, digits=1))us, Pi time needed: $(round(carrier_pi_time, digits=2))us")
+    tight_layout()
     total_dis = Seq.total_dis(kern, opt_raw_params, modes)
     total_cumdis = Seq.total_cumdis(kern, opt_raw_params, modes)
     total_disδ = Seq.total_disδ(kern, opt_raw_params, modes)
@@ -176,7 +198,14 @@ function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes)
         "displacement_at_+1kHz" => dis_at_plus1kHz,
         "enclosed_area" => area0,
         "gradient_area_detuning" => total_areaδ,
-        "carrier_pi_time_required" => π/maximum(Ωs)/2,
+        "carrier_pi_time_required" => carrier_pi_time,
+        "opt_params" => collect(best_params),
+        "pitime" => pitime,
+        "τmin" => τmin,
+        "τmax" => τmax,
+        "maxtime" => maxtime,
+        "min_mode_index" => min_mode_index,
+        "max_mode_index" => max_mode_index,
     )
     return opt_raw_params, metadata
 end
@@ -212,6 +241,23 @@ function save_am_solution(filename, opt_raw_params, metadata, sysparams, ion1, i
         JSON.print(io, solution_data, 2)
     end
     println("Saved solution for ions ($ion1, $ion2) to $filename")
+end
+
+function load_solution_metadata(filename, ion_pair_key)
+    data = open(filename) do io
+        JSON.parse(io)
+    end
+    xx = get(data, "XX", nothing)
+    xx === nothing && return nothing
+    sol = get(xx, ion_pair_key, nothing)
+    sol === nothing && return nothing
+    meta_str = get(sol, "metadata", nothing)
+    meta_str === nothing && return nothing
+    meta = JSON.parse(meta_str)
+    if haskey(meta, "opt_params")
+        meta["opt_params"] = Float64.(meta["opt_params"])
+    end
+    return meta
 end
 
 function plot_trajectories(opt_raw_params, modes)
