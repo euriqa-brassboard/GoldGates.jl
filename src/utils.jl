@@ -1,5 +1,8 @@
 using PyPlot
-using MSSim: Sequence as Seq 
+using MSSim: Sequence as Seq
+using NLopt
+using JSON
+using Dates
 
 function amp_base_funcs(n::Integer; atol::Real = 1e-12)
     @assert n ≥ 1 "n must be at least 1"
@@ -37,7 +40,90 @@ function _objfunc(vals)
     return 5 * dis + disδ / 100 + (abs(area) - π / 2)^2 * 100 + (areaδ / 1e4)^2
 end
 
-function get_metadata_and_plot(nlmodel, best_params;)
+function setup_modes(sysparams, ion1, ion2, nions)
+    modes = Seq.Modes()
+    idx1 = ion1 + (nions + 1) ÷ 2
+    idx2 = ion2 + (nions + 1) ÷ 2
+    for i in 1:nions
+        push!(modes,
+            2π * sysparams.modes.radial1[i],
+            sysparams.participation_factors[i][idx1] * sysparams.participation_factors[i][idx2] * sysparams.lamb_dicke_parameters[i]^2)
+    end
+    return modes
+end
+
+function setup_model(nseg, modes)
+    objfunc = Opts.autodiff(_objfunc)
+    buf_opt = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_allδ), Val(SS.mask_allδ))
+    amp_funcs = amp_base_funcs(nseg)
+    nlmodel = Seq.Objective(SL.pmask_full,
+        ((:dis2, 0), (:disδ2, 0), (:area, 0),
+            (:areaδ, 0), (:τ, 0)),
+        objfunc, modes, buf_opt,
+        freq=Seq.FreqSpec(false, sym=true),
+        amp=Seq.AmpSpec(cb=amp_funcs, sym=true))
+    return nlmodel
+end
+
+function setup_optimizer(nlmodel, sysparams; pitime=30, τmin=5, τmax=50, maxtime=10, min_mode_index=1, max_mode_index=3)
+    Ωmax = π / (2 * pitime)
+    ωmin = 2π * sysparams.modes.radial1[min_mode_index]
+    ωmax = 2π * sysparams.modes.radial1[max_mode_index]
+
+    nargs = Seq.nparams(nlmodel)
+    tracker = Opts.NLVarTracker(nargs)
+    for Ω in nlmodel.param.Ωs
+        Opts.set_bound!(tracker, Ω, 0, Ωmax)
+    end
+    Opts.set_bound!(tracker, nlmodel.param.τ, τmin, τmax)
+    for ω in nlmodel.param.ωs
+        Opts.set_bound!(tracker, ω, ωmin, ωmax)
+    end
+
+    opt = NLopt.Opt(:LD_LBFGS, nargs)
+    NLopt.min_objective!(opt, nlmodel)
+    NLopt.lower_bounds!(opt, Opts.lower_bounds(tracker))
+    NLopt.upper_bounds!(opt, Opts.upper_bounds(tracker))
+    NLopt.maxtime!(opt, maxtime)
+
+    return opt, tracker
+end
+
+function run_optimization!(opt, tracker, nlmodel; iterations=300, threshold=-Inf)
+    best_obj = Inf
+    best_params = nothing
+
+    @time for i in 1:iterations
+        initial_params = Opts.init_vars!(tracker)
+        obj, params, ret = NLopt.optimize(opt, initial_params)
+        if getfield(NLopt, ret) < 0
+            continue
+        end
+        if obj < best_obj
+            best_obj = obj
+            area = nlmodel(Val((:area, 0)), params)
+            best_status = (
+                obj = obj,
+                dis = nlmodel(Val((:dis2, 0)), params),
+                disδ = nlmodel(Val((:disδ2, 0)), params),
+                area = area,
+                areaε = abs(area) - π / 2,
+                areaδ = nlmodel(Val((:areaδ, 0)), params),
+                total_t = nlmodel(Val((:τ, 0)), params),
+                Ωmax = params[nlmodel.param.Ωs[1]],
+            )
+            println(best_status)
+            best_params = params
+        end
+        if best_obj < threshold
+            break
+        end
+    end
+
+    return best_params, best_obj
+end
+
+function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes)
     buf_plot = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full));
     kern = SL.Kernel(buf_plot, Val(SL.pmask_full));
     opt_raw_params = Seq.RawParams(nlmodel, best_params)
@@ -79,14 +165,67 @@ function get_metadata_and_plot(nlmodel, best_params;)
     total_cumdis = Seq.total_cumdis(kern, opt_raw_params, modes)
     total_disδ = Seq.total_disδ(kern, opt_raw_params, modes)
     total_areaδ = Seq.total_areaδ(kern, opt_raw_params, modes)
+    dis_at_minus1kHz = Seq.total_dis(kern, Seq.adjust(opt_raw_params, δ=2π * -1 / 1000), modes)
+    dis_at_plus1kHz = Seq.total_dis(kern, Seq.adjust(opt_raw_params, δ=2π * 1 / 1000), modes)
     metadata = Dict(
         "total_gate_time" => total_gate_time,
         "total_displacement" => total_dis,
         "total_cumulative_displacement" => total_cumdis,
         "gradient_displacement_detuning" => total_disδ,
+        "displacement_at_-1kHz" => dis_at_minus1kHz,
+        "displacement_at_+1kHz" => dis_at_plus1kHz,
         "enclosed_area" => area0,
         "gradient_area_detuning" => total_areaδ,
         "carrier_pi_time_required" => π/maximum(Ωs)/2,
     )
     return opt_raw_params, metadata
-end 
+end
+
+function save_am_solution(filename, opt_raw_params, metadata, sysparams, ion1, ion2)
+    ion_key = join(sort!([ion1, ion2], rev=true), ",")
+
+    new_xx_sol = GoldGates.XXSolution(
+        opt_raw_params,
+        metadata["enclosed_area"],
+        metadata=JSON.json(metadata)
+    )
+
+    if isfile(filename)
+        existing_file_content = open(filename, "r") do io
+            JSON.parse(io)
+        end
+        xx_dict = get!(existing_file_content, "XX", Dict())
+        xx_dict[ion_key] = new_xx_sol
+        solution_data = existing_file_content
+    else
+        solution_data = Dict(
+            "XX" => Dict(ion_key => new_xx_sol),
+            "modes" => Dict(
+                "radial1" => sysparams.modes.radial1,
+                "axial" => [],
+                "radial2" => []
+            )
+        )
+    end
+
+    open(filename, "w") do io
+        JSON.print(io, solution_data, 2)
+    end
+    println("Saved solution for ions ($ion1, $ion2) to $filename")
+end
+
+function plot_trajectories(opt_raw_params, modes)
+    n = length(modes.modes)
+    fig, axes = subplots(cld(n, 3), 3, figsize=(8, n))
+
+    for i in 1:n
+        _, xs, ys = Seq.get_trajectory(opt_raw_params, 10001; ωm=modes[i][1])
+        ax = axes[i]
+        ax.plot(xs, ys, lw=1)
+        ax.set_title("Mode $i")
+        ax.grid(true)
+    end
+
+    tight_layout()
+    show()
+end
