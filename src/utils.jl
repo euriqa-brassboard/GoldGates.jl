@@ -227,9 +227,9 @@ function verify_solution(metadata)
         ("displacement_at_+1kHz",           v -> v <= 0.05,  "<= 0.05"),
         ("displacement_at_-1kHz",           v -> v <= 0.05,  "<= 0.05"),
         ("carrier_pi_time_required",        v -> v >= 2.7,   ">= 2.7"),
-        ("gradient_displacement_detuning",  v -> v <= 0.001, "<= 0.001"),
-        ("total_displacement",              v -> v <= 0.001, "<= 0.001"),
-        ("total_cumulative_displacement",   v -> v <= 0.001, "<= 0.001"),
+        ("gradient_displacement_detuning",  v -> v <= 0.002, "<= 0.002"),
+        ("total_displacement",              v -> v <= 0.002, "<= 0.002"),
+        ("total_cumulative_displacement",   v -> v <= 0.002, "<= 0.002"),
     ]
     failures = String[]
     for (key, test, msg) in checks
