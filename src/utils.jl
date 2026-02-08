@@ -3,6 +3,7 @@ using MSSim: Sequence as Seq
 using NLopt
 using JSON
 using Dates
+using Printf
 
 function amp_base_funcs(n::Integer; atol::Real = 1e-12)
     @assert n ≥ 1 "n must be at least 1"
@@ -148,7 +149,7 @@ function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes;
     kern = SL.Kernel(buf_plot, Val(SL.pmask_full));
     opt_raw_params = Seq.RawParams(nlmodel, best_params)
 
-    fig, axes = subplots(2, 2, figsize=(8, 4))
+    fig, axes = subplots(2, 2, figsize=(8, 5.5))
 
     ts, Ωs = Seq.get_Ωs(opt_raw_params)
     axes[1].plot(ts, Ωs, label="Ω")
@@ -181,14 +182,24 @@ function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes;
 
     total_gate_time = best_params[nlmodel.param.τ] * nseg
     carrier_pi_time = π / maximum(Ωs) / 2
-    fig.suptitle("Pair $ion1:$ion2, Gate time: $(round(total_gate_time, digits=1))us, Pi time needed: $(round(carrier_pi_time, digits=2))us")
-    tight_layout()
     total_dis = Seq.total_dis(kern, opt_raw_params, modes)
     total_cumdis = Seq.total_cumdis(kern, opt_raw_params, modes)
     total_disδ = Seq.total_disδ(kern, opt_raw_params, modes)
     total_areaδ = Seq.total_areaδ(kern, opt_raw_params, modes)
     dis_at_minus1kHz = Seq.total_dis(kern, Seq.adjust(opt_raw_params, δ=2π * -1 / 1000), modes)
     dis_at_plus1kHz = Seq.total_dis(kern, Seq.adjust(opt_raw_params, δ=2π * 1 / 1000), modes)
+
+    fig.suptitle("Ions ($ion1, $ion2) | Gate time: $(round(total_gate_time, digits=1)) μs | π-time: $(round(carrier_pi_time, digits=1)) μs")
+    info_text = join([@sprintf("%-36s %.4g", key, metadata_val) for (key, metadata_val) in [
+        ("total_displacement", total_dis),
+        ("total_cumulative_displacement", total_cumdis),
+        ("gradient_displacement_detuning", total_disδ),
+        ("enclosed_area", area0),
+        ("gradient_area_detuning", total_areaδ),
+    ]], "\n")
+    fig.text(0.02, 0.01, info_text, verticalalignment="bottom")
+    tight_layout(rect=[0, 0.18, 1, 0.95])
+
     metadata = Dict(
         "total_gate_time" => total_gate_time,
         "total_displacement" => total_dis,
@@ -208,6 +219,33 @@ function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes;
         "max_mode_index" => max_mode_index,
     )
     return opt_raw_params, metadata
+end
+
+function verify_solution(metadata)
+    checks = [
+        ("total_gate_time",                 v -> v <= 500,   "<= 500"),
+        ("displacement_at_+1kHz",           v -> v <= 0.05,  "<= 0.05"),
+        ("displacement_at_-1kHz",           v -> v <= 0.05,  "<= 0.05"),
+        ("carrier_pi_time_required",        v -> v >= 2.7,   ">= 2.7"),
+        ("gradient_displacement_detuning",  v -> v <= 0.001, "<= 0.001"),
+        ("total_displacement",              v -> v <= 0.001, "<= 0.001"),
+        ("total_cumulative_displacement",   v -> v <= 0.001, "<= 0.001"),
+    ]
+    failures = String[]
+    for (key, test, msg) in checks
+        val = metadata[key]
+        if !test(val)
+            push!(failures, "$key = $(@sprintf("%.4g", val)) ($msg)")
+        end
+    end
+    if isempty(failures)
+        println("All verification checks passed.")
+    else
+        for f in failures
+            @warn f
+        end
+    end
+    return failures
 end
 
 function save_am_solution(filename, opt_raw_params, metadata, sysparams, ion1, ion2)
