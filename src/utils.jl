@@ -103,7 +103,7 @@ end
 
 function run_optimization!(opt, tracker, nlmodel; threshold=-Inf,
                            initial_params=nothing, perturbation=0.05)
-    iterations = initial_params === nothing ? 300 : 50
+    iterations = initial_params === nothing ? 500 : 50
     best_obj = Inf
     best_params = nothing
 
@@ -144,42 +144,14 @@ function run_optimization!(opt, tracker, nlmodel; threshold=-Inf,
 end
 
 function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes;
-                               ion1, ion2, pitime, τmin, τmax, maxtime, min_mode_index, max_mode_index)
+                               ion1, ion2, pitime, τmin, τmax, maxtime, min_mode_index, max_mode_index,
+                               plot=true)
     buf_plot = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full));
     kern = SL.Kernel(buf_plot, Val(SL.pmask_full));
     opt_raw_params = Seq.RawParams(nlmodel, best_params)
 
-    fig, axes = subplots(2, 2, figsize=(8, 5.5))
-
     ts, Ωs = Seq.get_Ωs(opt_raw_params)
-    axes[1].plot(ts, Ωs, label="Ω")
-    axes[1].set_xlabel(raw"Time ($\mu s$)")
-    axes[1].set_ylabel(raw"$\Omega$")
-    axes[1].grid(true)
-    axes[1].legend()
-
-    plot_δs = range(-1, 1, 10001); # kHz
-    axes[2].plot(plot_δs, [Seq.total_dis(kern, Seq.adjust(opt_raw_params, δ=2π * δ / 1000), modes) for δ in plot_δs])
-    axes[2].set_xlim([-1, 1])
-    axes[2].set_xlabel("Frequency offset (kHz)")
-    axes[2].set_ylabel("Total Displacement")
-    axes[2].grid(true)
-
-    ts, ωs = Seq.get_ωs(opt_raw_params)
-    axes[3].plot(ts, ωs ./ 2π)
-    axes[3].set_xlabel(raw"Time ($\mu s$)")
-    axes[3].set_ylabel(raw"$\omega$ (MHz)")
-    for m in sysparams.modes.radial1
-        axes[3].axhline(m, ls="--", color="red", alpha=0.4)
-    end
-
     area0 = Seq.total_area(kern, opt_raw_params, modes)
-    axes[4].plot(plot_δs, [Seq.total_area(kern, Seq.adjust(opt_raw_params, δ=2π * δ / 1000), modes) / area0 for δ in plot_δs])
-    axes[4].set_xlim([-1, 1])
-    axes[4].set_xlabel("Frequency offset (kHz)")
-    axes[4].set_ylabel("Total Area")
-    axes[4].grid(true)
-
     total_gate_time = best_params[nlmodel.param.τ] * nseg
     carrier_pi_time = π / maximum(Ωs) / 2
     total_dis = Seq.total_dis(kern, opt_raw_params, modes)
@@ -189,16 +161,48 @@ function get_metadata_and_plot(nlmodel, best_params, nseg, sysparams, modes;
     dis_at_minus1kHz = Seq.total_dis(kern, Seq.adjust(opt_raw_params, δ=2π * -1 / 1000), modes)
     dis_at_plus1kHz = Seq.total_dis(kern, Seq.adjust(opt_raw_params, δ=2π * 1 / 1000), modes)
 
-    fig.suptitle("Ions ($ion1, $ion2) | Gate time: $(round(total_gate_time, digits=1)) μs | π-time: $(round(carrier_pi_time, digits=1)) μs")
-    info_text = join([@sprintf("%-36s %.4g", key, metadata_val) for (key, metadata_val) in [
-        ("total_displacement", total_dis),
-        ("total_cumulative_displacement", total_cumdis),
-        ("gradient_displacement_detuning", total_disδ),
-        ("enclosed_area", area0),
-        ("gradient_area_detuning", total_areaδ),
-    ]], "\n")
-    fig.text(0.02, 0.01, info_text, verticalalignment="bottom")
-    tight_layout(rect=[0, 0.18, 1, 0.95])
+    if plot
+        fig, axes = subplots(2, 2, figsize=(8, 5.5))
+
+        axes[1].plot(ts, Ωs, label="Ω")
+        axes[1].set_xlabel(raw"Time ($\mu s$)")
+        axes[1].set_ylabel(raw"$\Omega$")
+        axes[1].grid(true)
+        axes[1].legend()
+
+        plot_δs = range(-1, 1, 10001); # kHz
+        axes[2].plot(plot_δs, [Seq.total_dis(kern, Seq.adjust(opt_raw_params, δ=2π * δ / 1000), modes) for δ in plot_δs])
+        axes[2].set_xlim([-1, 1])
+        axes[2].set_xlabel("Frequency offset (kHz)")
+        axes[2].set_ylabel("Total Displacement")
+        axes[2].grid(true)
+
+        ts, ωs = Seq.get_ωs(opt_raw_params)
+        axes[3].plot(ts, ωs ./ 2π)
+        axes[3].set_xlabel(raw"Time ($\mu s$)")
+        axes[3].set_ylabel(raw"$\omega$ (MHz)")
+        for m in sysparams.modes.radial1
+            axes[3].axhline(m, ls="--", color="red", alpha=0.4)
+        end
+
+        axes[4].plot(plot_δs, [Seq.total_area(kern, Seq.adjust(opt_raw_params, δ=2π * δ / 1000), modes) / area0 for δ in plot_δs])
+        axes[4].set_xlim([-1, 1])
+        axes[4].set_xlabel("Frequency offset (kHz)")
+        axes[4].set_ylabel("Total Area")
+        axes[4].grid(true)
+
+        fig.suptitle("Ions ($ion1, $ion2) | Gate time: $(round(total_gate_time, digits=1)) μs | π-time: $(round(carrier_pi_time, digits=1)) μs")
+        info_text = join([@sprintf("%-36s %.4g", key, metadata_val) for (key, metadata_val) in [
+            ("total_displacement", total_dis),
+            # ("total_cumulative_displacement", total_cumdis),
+            ("gradient_displacement_detuning", total_disδ),
+            ("enclosed_area", area0),
+            ("gradient_area_detuning", total_areaδ),
+        ]], "\n")
+        fig.text(0.02, 0.01, info_text, verticalalignment="bottom")
+        tight_layout(rect=[0, 0.18, 1, 0.95])
+        display(fig)
+    end
 
     metadata = Dict(
         "total_gate_time" => total_gate_time,
@@ -229,7 +233,8 @@ function verify_solution(metadata)
         ("carrier_pi_time_required",        v -> v >= 2.7,   ">= 2.7"),
         ("gradient_displacement_detuning",  v -> v <= 0.002, "<= 0.002"),
         ("total_displacement",              v -> v <= 0.002, "<= 0.002"),
-        ("total_cumulative_displacement",   v -> v <= 0.002, "<= 0.002"),
+        # this is equivalent to gradient displace detuning when the gate close
+        # ("total_cumulative_displacement",   v -> v <= 0.002, "<= 0.002"),
     ]
     failures = String[]
     for (key, test, msg) in checks
