@@ -99,7 +99,7 @@ function opt_one!(o::PreOptimizer)
     dis2 = 0.0
     disδ = 0.0
     max_area = 0.0
-    @inbounds @simd ivdep for i in nions
+    @inbounds @simd ivdep for i in 1:nions
         dis += abs2(props.dis[i])
         dis2 += abs2(props.dis[i + nions])
         disδ += abs2(props.disδ[i])
