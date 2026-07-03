@@ -20,7 +20,7 @@ const centers = Solutions.CenterTracker("phoenix")
 const fitting = Potentials.Fitting(potential, orders=(8, 2, 2), sizes=(77, 5, 5))
 
 function get_rf_center(xpos_um)
-    xidx = Potentials.x_axis_to_index(potential, xpos_um ./ 1000)
+    xidx = Potentials.x_axis_to_index(potential, xpos_um)
     return (xidx, get(centers, xidx)...)
 end
 
